@@ -56,6 +56,7 @@ A modern, efficient web application designed to track and manage intern working 
 4. **Run Locally**:
    - Use XAMPP/WAMP or a local PHP server.
    - Access via `http://localhost/Intern-Hours`.
+   - Run via CLI: php -S localhost:8000
 
 ## 🚢 Deployment
 
