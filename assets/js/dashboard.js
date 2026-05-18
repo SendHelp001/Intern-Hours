@@ -919,3 +919,31 @@ if (absenceModal) {
     }
   });
 }
+
+function downloadPDF() {
+  let fromDate = filterFromDate;
+  let toDate = filterToDate;
+
+  // If filter date is not set, default to the entire currently viewed month
+  if (!fromDate || !toDate) {
+    const firstDay = "01";
+    const lastDayObj = new Date(currentYear, currentMonth, 0);
+    const lastDay = String(lastDayObj.getDate()).padStart(2, "0");
+    const monthStr = String(currentMonth).padStart(2, "0");
+    
+    fromDate = `${currentYear}-${monthStr}-${firstDay}`;
+    toDate = `${currentYear}-${monthStr}-${lastDay}`;
+  }
+
+  // Build the API URL
+  let url = apiBasePath + "api/download-dtr.php?from_date=" + fromDate + "&to_date=" + toDate;
+
+  // If in supervisor view, append the target userId
+  if (typeof isSupervisorView !== "undefined" && isSupervisorView) {
+    url += "&userId=" + userId;
+  }
+
+  // Open in a new tab to trigger download
+  window.open(url, "_blank");
+}
+
