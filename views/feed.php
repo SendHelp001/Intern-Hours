@@ -63,9 +63,6 @@ require_once __DIR__ . '/components/header.php';
         case 'register':
             require_once __DIR__ . '/pages/auth/registry.php';
             break;
-        case 'profile':
-            require_once __DIR__ . '/pages/intern/profile.php';
-            break;
         case 'dashboard':
             if ($_SESSION['user_role'] === 'Admin') {
                 require_once __DIR__ . '/pages/supervisor/dashboard.php';
