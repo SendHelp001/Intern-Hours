@@ -34,14 +34,14 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['user_role'])) {
 } else {
     // If not logged in and trying to access restricted page, go to login
     $requested_page = $_GET['page'] ?? 'login';
-    if (!in_array($requested_page, ['login', 'register', 'terms'])) {
+    if (!in_array($requested_page, ['login', 'register', 'terms', 'privacy'])) {
         header("Location: feed.php?page=login");
         exit;
     }
 }
 
 $page = $_GET['page'] ?? 'login';
-$showNavbar = !in_array($page, ['login', 'register']);
+$showNavbar = true;
 ?>
 
 <?php 
@@ -76,6 +76,9 @@ require_once __DIR__ . '/components/header.php';
             break;
         case 'terms':
             require_once __DIR__ . '/pages/termsofservices.php';
+            break;
+        case 'privacy':
+            require_once __DIR__ . '/pages/privacypolicy.php';
             break;
         case 'login':
         default:

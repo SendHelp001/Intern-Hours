@@ -4,7 +4,11 @@
             <div class="text-2xl font-bold text-gray-900">
                 <a href="<?php echo $base_url ?? ''; ?>index.html">OurTracker</a>
             </div>
-            <?php if (isset($_SESSION['user_id']) && (!isset($page) || $page !== 'terms')): ?>
+            <?php if (isset($page) && in_array($page, ['login', 'register'])): ?>
+                <div class="flex items-center gap-6">
+                    <a href="<?php echo $base_url ?? ''; ?>index.html" class="text-gray-600 hover:text-gray-900 font-medium transition">Home</a>
+                </div>
+            <?php elseif (isset($_SESSION['user_id']) && (!isset($page) || !in_array($page, ['terms', 'privacy']))): ?>
                 <div class="hidden md:flex items-center gap-6">
                     <a href="<?php echo $base_url ?? ''; ?>views/feed.php?page=dashboard" class="text-gray-600 hover:text-gray-900 font-medium transition">Dashboard</a>
                     
@@ -23,7 +27,7 @@
             <?php endif; ?>
         </div>
         
-        <?php if (!isset($page) || $page !== 'terms'): ?>
+        <?php if (!isset($page) || !in_array($page, ['terms', 'privacy', 'login', 'register'])): ?>
             <div class="flex items-center gap-4">
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <span class="text-sm text-gray-500 hidden sm:inline">Hello, <strong><?php echo htmlspecialchars($_SESSION['user_name']); ?></strong></span>
