@@ -81,6 +81,9 @@ require_once '../../components/header.php';
                 <div class="calendar-nav">
                     <button onclick="previousMonth()">← Prev</button>
                     <button onclick="nextMonth()">Next →</button>
+                    <button class="btn-download-pdf" id="btn-download-pdf" onclick="downloadPDF()">
+                        <span>📄</span> Download DTR
+                    </button>
                 </div>
             </div>
             <div class="calendar-grid" id="calendar-grid"></div>
@@ -136,6 +139,7 @@ require_once '../../components/header.php';
     </div>
 
     <script>
+        const apiBasePath = '../../../';
         let currentMonth = parseInt('<?php echo $current_month; ?>');
         let currentYear = parseInt('<?php echo $current_year; ?>');
         let userId = parseInt('<?php echo $intern_id; ?>');

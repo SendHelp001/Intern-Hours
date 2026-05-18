@@ -919,3 +919,71 @@ if (absenceModal) {
     }
   });
 }
+
+function downloadPDF() {
+  let fromDate = filterFromDate;
+  let toDate = filterToDate;
+
+  // If filter date is not set, default to the entire currently viewed month
+  if (!fromDate || !toDate) {
+    const firstDay = "01";
+    const lastDayObj = new Date(currentYear, currentMonth, 0);
+    const lastDay = String(lastDayObj.getDate()).padStart(2, "0");
+    const monthStr = String(currentMonth).padStart(2, "0");
+    
+    fromDate = `${currentYear}-${monthStr}-${firstDay}`;
+    toDate = `${currentYear}-${monthStr}-${lastDay}`;
+  }
+
+  // Build the API URL
+  let url = apiBasePath + "api/download-dtr.php?from_date=" + fromDate + "&to_date=" + toDate;
+
+  // If in supervisor view, append the target userId
+  if (typeof isSupervisorView !== "undefined" && isSupervisorView) {
+    url += "&userId=" + userId;
+  }
+
+  // Visual feedback: show loading state on the button
+  const btn = document.getElementById("btn-download-pdf");
+  if (!btn) return;
+  
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = "<span>⏳</span> Generating PDF...";
+
+  fetch(url)
+    .then(response => {
+      if (!response.ok) {
+        return response.text().then(text => {
+          try {
+            const err = JSON.parse(text);
+            throw new Error(err.error || "Server error");
+          } catch (e) {
+            const plainText = text.replace(/<[^>]*>/g, '').trim().substring(0, 150);
+            throw new Error(plainText || `Server error (${response.status})`);
+          }
+        });
+      }
+      return response.blob();
+    })
+    .then(blob => {
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = downloadUrl;
+      a.download = `DTR_${fromDate}_to_${toDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+    })
+    .catch(error => {
+      console.error("Error downloading DTR:", error);
+      alert("Failed to download DTR: " + error.message);
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    });
+}
+

@@ -45,6 +45,9 @@ $base_url = "../";
                 <div class="calendar-nav">
                     <button onclick="previousMonth()">← Prev</button>
                     <button onclick="nextMonth()">Next →</button>
+                    <button class="btn-download-pdf" id="btn-download-pdf" onclick="downloadPDF()">
+                        <span>📄</span> Download DTR
+                    </button>
                 </div>
             </div>
 
