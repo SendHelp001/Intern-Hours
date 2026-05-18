@@ -50,4 +50,46 @@ try {
 } catch (PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }
+
+// Parse Browser from User Agent
+function get_browser_from_ua($user_agent) {
+    if (empty($user_agent)) return 'Unknown Browser';
+    
+    if (preg_match('/chrome|crios/i', $user_agent) && !preg_match('/opr|opios/i', $user_agent) && !preg_match('/edge|edg/i', $user_agent)) {
+        return 'Google Chrome';
+    } elseif (preg_match('/safari/i', $user_agent) && !preg_match('/chrome|crios/i', $user_agent) && !preg_match('/android/i', $user_agent)) {
+        return 'Apple Safari';
+    } elseif (preg_match('/firefox|fxios/i', $user_agent)) {
+        return 'Mozilla Firefox';
+    } elseif (preg_match('/edge|edg|edgios|edga/i', $user_agent)) {
+        return 'Microsoft Edge';
+    } elseif (preg_match('/opera|opr|opios/i', $user_agent)) {
+        return 'Opera';
+    } elseif (preg_match('/msie|trident/i', $user_agent)) {
+        return 'Internet Explorer';
+    }
+    
+    return 'Other Browser';
+}
+
+// Parse Device from User Agent
+function get_device_from_ua($user_agent) {
+    if (empty($user_agent)) return 'Unknown Device';
+    
+    if (preg_match('/iphone/i', $user_agent)) {
+        return 'iPhone';
+    } elseif (preg_match('/ipad/i', $user_agent)) {
+        return 'iPad';
+    } elseif (preg_match('/android/i', $user_agent)) {
+        return 'Android Device';
+    } elseif (preg_match('/windows/i', $user_agent)) {
+        return 'Windows PC';
+    } elseif (preg_match('/macintosh|mac os x/i', $user_agent)) {
+        return 'Mac';
+    } elseif (preg_match('/linux/i', $user_agent)) {
+        return 'Linux PC';
+    }
+    
+    return 'Desktop PC';
+}
 ?>

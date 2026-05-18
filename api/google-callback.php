@@ -87,8 +87,13 @@ if ($user) {
     $stmt->execute([$token_data['access_token'], $token_data['refresh_token'] ?? '', $user['id']]);
     
     // Log login to login_logs table
-    $log_stmt = $pdo->prepare("INSERT INTO login_logs (user_id) VALUES (?)");
-    $log_stmt->execute([$user['id']]);
+    $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    $browser = get_browser_from_ua($ua);
+    $device = get_device_from_ua($ua);
+
+    $log_stmt = $pdo->prepare("INSERT INTO login_logs (user_id, ip_address, browser, device) VALUES (?, ?, ?, ?)");
+    $log_stmt->execute([$user['id'], $ip_address, $browser, $device]);
 
     // Redirect based on role
     // Redirect to routed dashboard
@@ -111,8 +116,13 @@ if ($user) {
         $_SESSION['user_role'] = $existing_user['role'];
         
         // Log login to login_logs table
-        $log_stmt = $pdo->prepare("INSERT INTO login_logs (user_id) VALUES (?)");
-        $log_stmt->execute([$existing_user['id']]);
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $browser = get_browser_from_ua($ua);
+        $device = get_device_from_ua($ua);
+
+        $log_stmt = $pdo->prepare("INSERT INTO login_logs (user_id, ip_address, browser, device) VALUES (?, ?, ?, ?)");
+        $log_stmt->execute([$existing_user['id'], $ip_address, $browser, $device]);
 
         header("Location: ../views/feed.php?page=dashboard");
         exit;
@@ -129,8 +139,13 @@ if ($user) {
         $_SESSION['user_role'] = 'Intern';
         
         // Log login to login_logs table
-        $log_stmt = $pdo->prepare("INSERT INTO login_logs (user_id) VALUES (?)");
-        $log_stmt->execute([$user_id]);
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $browser = get_browser_from_ua($ua);
+        $device = get_device_from_ua($ua);
+
+        $log_stmt = $pdo->prepare("INSERT INTO login_logs (user_id, ip_address, browser, device) VALUES (?, ?, ?, ?)");
+        $log_stmt->execute([$user_id, $ip_address, $browser, $device]);
 
         header("Location: ../views/feed.php?page=dashboard");
         exit;
