@@ -9,13 +9,17 @@ $user_id = $_SESSION['user_id'];
 $user_name = $_SESSION['user_name'];
 
 // Fetch burnout settings
-$burnout_stmt = $pdo->prepare("SELECT hour_goal, hour_from, duty_from, duty_to FROM burnout_counter WHERE user_id = ?");
+$burnout_stmt = $pdo->prepare("SELECT hour_goal, starting_date, duty_days FROM burnout_counter WHERE user_id = ?");
 $burnout_stmt->execute([$user_id]);
 $burnout = $burnout_stmt->fetch();
 $hour_goal = $burnout ? (int)$burnout['hour_goal'] : 480;
-$hour_from = $burnout ? date('Y-m-d', strtotime($burnout['hour_from'])) : date('Y-m-d');
-$duty_from = $burnout ? $burnout['duty_from'] : 'Monday';
-$duty_to = $burnout ? $burnout['duty_to'] : 'Friday';
+$starting_date = $burnout ? date('Y-m-d', strtotime($burnout['starting_date'])) : date('Y-m-d');
+$duty_days = $burnout ? $burnout['duty_days'] : 'Monday,Tuesday,Wednesday,Thursday,Friday';
+
+// Format display schedule nicely (e.g. "Mon, Tue, Wed, Thu, Fri")
+$days_list = explode(',', $duty_days);
+$short_days = array_map(function($d) { return substr(trim($d), 0, 3); }, $days_list);
+$display_schedule = implode(', ', $short_days);
 
 $current_month = (int)($_GET['month'] ?? date('m'));
 $current_year = (int)($_GET['year'] ?? date('Y'));
@@ -271,13 +275,18 @@ $base_url = "../";
                         Internship Burnout Counter
                     </h3>
                     <p class="burnout-subtitle">
-                        Started: <span class="font-bold"><?php echo date('M d, Y', strtotime($hour_from)); ?></span> &bull; 
-                        Schedule: <span class="font-bold"><?php echo $duty_from; ?> to <?php echo $duty_to; ?></span>
+                        Started: <span class="font-bold"><?php echo date('M d, Y', strtotime($starting_date)); ?></span> &bull; 
+                        Schedule: <span class="font-bold"><?php echo htmlspecialchars($display_schedule); ?></span>
                     </p>
                 </div>
-                <span class="burnout-goal-badge">
-                    Goal: <?php echo $hour_goal; ?> Hours
-                </span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="burnout-goal-badge">
+                        Goal: <?php echo $hour_goal; ?> Hours
+                    </span>
+                    <button id="open-goal-modal-btn" class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 dark:text-blue-400 rounded-xl transition shadow-sm border border-blue-100 dark:border-blue-900" title="Adjust Goal Settings">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </button>
+                </div>
             </div>
             
             <div class="analytics-grid">
@@ -546,6 +555,61 @@ $base_url = "../";
         </div>
     </div>
 
+    <!-- Adjust Goal Settings Modal Overlay -->
+    <div id="goal-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all duration-300">
+        <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-8 max-w-md w-full shadow-2xl transform scale-95 transition-all duration-300 relative">
+            <button id="close-goal-modal-btn" class="absolute top-6 right-6 text-gray-400 hover:text-gray-900 dark:hover:text-white transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            
+            <h3 class="text-xl font-extrabold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="stroke-width: 2.2;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2"></path></svg>
+                Goal Settings
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">Configure target hours and schedule for your burnout calculation.</p>
+            
+            <div id="goal-modal-alert" class="hidden p-4 rounded-xl text-xs font-bold mb-5"></div>
+            
+            <form id="goal-modal-form" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" for="modal_hour_goal">Target Internship Hours</label>
+                    <input class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 outline-none transition bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" type="number" id="modal_hour_goal" required min="1" value="<?php echo $hour_goal; ?>">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" for="modal_starting_date">Start Date</label>
+                    <input class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 outline-none transition bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" type="date" id="modal_starting_date" required value="<?php echo $starting_date; ?>">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Duty Days Schedule</label>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2.5 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+                        <?php
+                        $all_days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                        $active_days = explode(',', $duty_days);
+                        foreach ($all_days as $day):
+                            $checked = in_array($day, $active_days) ? 'checked' : '';
+                        ?>
+                            <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                <input type="checkbox" name="modal_duty_days[]" value="<?php echo $day; ?>" <?php echo $checked; ?> class="w-4 h-4 rounded text-blue-600 border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:ring-blue-500 cursor-pointer">
+                                <?php echo $day; ?>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                
+                <div class="flex gap-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <button type="button" id="cancel-goal-modal-btn" class="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700/80 transition text-sm">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition text-sm shadow-lg shadow-blue-500/10">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         let currentMonth = parseInt('<?php echo $current_month; ?>');
         let currentYear = parseInt('<?php echo $current_year; ?>');
@@ -561,9 +625,8 @@ $base_url = "../";
         const apiBasePath = '../';
         const birthdaysData = <?php echo json_encode($birthdays); ?>;
         const hourGoal = parseInt('<?php echo $hour_goal; ?>');
-        const hourFrom = '<?php echo $hour_from; ?>';
-        const dutyFrom = '<?php echo $duty_from; ?>';
-        const dutyTo = '<?php echo $duty_to; ?>';
+        const startingDate = '<?php echo $starting_date; ?>';
+        const dutyDays = '<?php echo $duty_days; ?>';
     </script>
     <script src="../assets/js/dashboard.js"></script>
     <script src="../assets/js/colleagues.js"></script>

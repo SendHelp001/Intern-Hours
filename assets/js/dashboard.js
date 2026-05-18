@@ -1136,36 +1136,16 @@ function calculateEstimatedCompletion(remainingHours, dailyAvg) {
   let addedDays = 0;
   let safetyLoop = 0;
 
-  const dayMap = {
-    'Sunday': 0,
-    'Monday': 1,
-    'Tuesday': 2,
-    'Wednesday': 3,
-    'Thursday': 4,
-    'Friday': 5,
-    'Saturday': 6
-  };
-
-  const fDay = typeof dutyFrom !== 'undefined' ? dutyFrom : 'Monday';
-  const tDay = typeof dutyTo !== 'undefined' ? dutyTo : 'Friday';
-  
-  const fromIdx = dayMap[fDay];
-  const toIdx = dayMap[tDay];
+  const daysOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const activeDaysList = (typeof dutyDays !== 'undefined' ? dutyDays : 'Monday,Tuesday,Wednesday,Thursday,Friday').split(',');
 
   while (addedDays < daysNeeded && safetyLoop < 1000) {
     safetyLoop++;
     currentDate.setDate(currentDate.getDate() + 1);
     
     // Check if on-duty day
-    const dayOfWeek = currentDate.getDay();
-    let isDuty = false;
-    if (fromIdx <= toIdx) {
-      isDuty = (dayOfWeek >= fromIdx && dayOfWeek <= toIdx);
-    } else {
-      isDuty = (dayOfWeek >= fromIdx || dayOfWeek <= toIdx);
-    }
-
-    if (!isDuty) {
+    const dayName = daysOfWeekNames[currentDate.getDay()];
+    if (!activeDaysList.includes(dayName)) {
       continue; // Skip off-duty days
     }
 
@@ -1186,5 +1166,106 @@ function calculateEstimatedCompletion(remainingHours, dailyAvg) {
   const options = { year: 'numeric', month: 'short', day: 'numeric' };
   return currentDate.toLocaleDateString('en-US', options);
 }
+
+// =========================================================================
+// 🎯 INTERNSHIP GOAL MODAL EVENT HANDLERS
+// =========================================================================
+document.addEventListener("DOMContentLoaded", () => {
+  const goalModal = document.getElementById("goal-modal");
+  const openGoalModalBtn = document.getElementById("open-goal-modal-btn");
+  const closeGoalModalBtn = document.getElementById("close-goal-modal-btn");
+  const cancelGoalModalBtn = document.getElementById("cancel-goal-modal-btn");
+  const goalModalForm = document.getElementById("goal-modal-form");
+  const goalModalAlert = document.getElementById("goal-modal-alert");
+
+  if (!goalModal) return;
+
+  function openModal() {
+    goalModal.classList.remove("hidden");
+    goalModal.classList.add("flex");
+    if (goalModalAlert) {
+      goalModalAlert.classList.add("hidden");
+      goalModalAlert.textContent = "";
+    }
+  }
+
+  function closeModal() {
+    goalModal.classList.add("hidden");
+    goalModal.classList.remove("flex");
+  }
+
+  if (openGoalModalBtn) openGoalModalBtn.addEventListener("click", openModal);
+  if (closeGoalModalBtn) closeGoalModalBtn.addEventListener("click", closeModal);
+  if (cancelGoalModalBtn) cancelGoalModalBtn.addEventListener("click", closeModal);
+
+  // Close modal when clicking outside content box
+  goalModal.addEventListener("click", (e) => {
+    if (e.target === goalModal) {
+      closeModal();
+    }
+  });
+
+  if (goalModalForm) {
+    goalModalForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const hourGoal = document.getElementById("modal_hour_goal").value;
+      const startingDate = document.getElementById("modal_starting_date").value;
+      const checkedBoxes = Array.from(document.querySelectorAll('input[name="modal_duty_days[]"]:checked'));
+      
+      if (checkedBoxes.length === 0) {
+        if (goalModalAlert) {
+          goalModalAlert.className = "p-4 rounded-xl text-xs font-bold mb-5 bg-red-50 text-red-600 border border-red-100";
+          goalModalAlert.textContent = "Please select at least one duty day.";
+          goalModalAlert.classList.remove("hidden");
+        }
+        return;
+      }
+
+      const dutyDays = checkedBoxes.map(cb => cb.value).join(",");
+      const submitBtn = goalModalForm.querySelector('button[type="submit"]');
+      const originalBtnText = submitBtn.textContent;
+
+      // Show loading spinner/state
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span class="inline-block animate-spin mr-2">⏳</span> Saving...`;
+
+      const formData = new FormData();
+      formData.append("hour_goal", hourGoal);
+      formData.append("starting_date", startingDate);
+      formData.append("duty_days", dutyDays);
+
+      fetch("../api/burnout_update.php", {
+        method: "POST",
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          if (goalModalAlert) {
+            goalModalAlert.className = "p-4 rounded-xl text-xs font-bold mb-5 bg-green-50 text-green-600 border border-green-100";
+            goalModalAlert.textContent = "Goal saved successfully! Reloading...";
+            goalModalAlert.classList.remove("hidden");
+          }
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+        } else {
+          throw new Error(data.error || "Failed to save goal settings.");
+        }
+      })
+      .catch(err => {
+        console.error("Error updating goal:", err);
+        if (goalModalAlert) {
+          goalModalAlert.className = "p-4 rounded-xl text-xs font-bold mb-5 bg-red-50 text-red-600 border border-red-100";
+          goalModalAlert.textContent = err.message;
+          goalModalAlert.classList.remove("hidden");
+        }
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      });
+    });
+  }
+});
 
 

@@ -9,36 +9,6 @@ $user_id = $_SESSION['user_id'];
 $success_msg = "";
 $error_msg = "";
 
-// Handle goal update form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_burnout'])) {
-    $hour_goal = (int)$_POST['hour_goal'];
-    $hour_from = $_POST['hour_from'];
-    $duty_from = $_POST['duty_from'];
-    $duty_to = $_POST['duty_to'];
-    
-    if ($hour_goal <= 0) {
-        $error_msg = "Hour goal must be a positive number.";
-    } elseif (empty($hour_from)) {
-        $error_msg = "Please select a starting date.";
-    } elseif (empty($duty_from) || empty($duty_to)) {
-        $error_msg = "Please select duty schedule days.";
-    } else {
-        // Save to burnout_counter (UPSERT style)
-        $stmt = $pdo->prepare("SELECT id FROM burnout_counter WHERE user_id = ?");
-        $stmt->execute([$user_id]);
-        $exists = $stmt->fetch();
-        
-        if ($exists) {
-            $stmt = $pdo->prepare("UPDATE burnout_counter SET hour_goal = ?, hour_from = ?, duty_from = ?, duty_to = ? WHERE user_id = ?");
-            $stmt->execute([$hour_goal, $hour_from, $duty_from, $duty_to, $user_id]);
-        } else {
-            $stmt = $pdo->prepare("INSERT INTO burnout_counter (user_id, hour_goal, hour_from, duty_from, duty_to) VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$user_id, $hour_goal, $hour_from, $duty_from, $duty_to]);
-        }
-        $success_msg = "Goal settings updated successfully!";
-    }
-}
-
 // Fetch latest user data including is_public, is_darkmode and total hours
 $stmt = $pdo->prepare("
     SELECT u.*, 
@@ -59,17 +29,6 @@ $office_name = $_SESSION['office_name'] ?? 'Not Assigned';
 $organization_name = $_SESSION['organization_name'] ?? 'Not Assigned';
 $office_id = $_SESSION['office_id'];
 $organization_id = $_SESSION['organization_id'];
-
-// Fetch current burnout settings
-$stmt = $pdo->prepare("SELECT hour_goal, hour_from, duty_from, duty_to FROM burnout_counter WHERE user_id = ?");
-$stmt->execute([$user_id]);
-$burnout = $stmt->fetch();
-
-$current_goal = $burnout ? (int)$burnout['hour_goal'] : 480;
-// Default date to today's date if not set
-$current_from = $burnout ? date('Y-m-d', strtotime($burnout['hour_from'])) : date('Y-m-d');
-$current_duty_from = $burnout ? $burnout['duty_from'] : 'Monday';
-$current_duty_to = $burnout ? $burnout['duty_to'] : 'Friday';
 
 // Fetch recent login sessions
 $stmt = $pdo->prepare("SELECT ip_address, browser, device, created_at FROM login_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT 5");
@@ -154,11 +113,7 @@ $base_url = "../";
 
             <!-- Settings Navigation -->
             <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-4 space-y-2 glass-card">
-                <button data-target="goal" class="settings-tab active w-full flex items-center gap-3 px-4 py-3 bg-gray-900 text-white rounded-xl transition font-bold text-sm">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2"></path></svg>
-                    Internship Goal
-                </button>
-                <button data-target="account" class="settings-tab w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition font-bold text-sm">
+                <button data-target="account" class="settings-tab active w-full flex items-center gap-3 px-4 py-3 bg-gray-900 text-white rounded-xl transition font-bold text-sm">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     Profile & Account
                 </button>
@@ -191,63 +146,9 @@ $base_url = "../";
                 <span id="save-status" class="text-xs font-bold text-green-600 px-3 py-1 bg-green-50 rounded-full opacity-0 transition-opacity">SAVED</span>
             </div>
 
-            <!-- Section 1: Internship Goal -->
-            <div id="section-goal" class="settings-section space-y-8">
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 glass-card">
-                    <h2 class="settings-title font-bold text-xl text-gray-900 flex items-center gap-2 mb-6">
-                        <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        Goal Settings
-                    </h2>
-                    <form action="" method="POST">
-                        <div class="mb-5">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2" for="hour_goal">Target Internship Hours</label>
-                            <input class="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none transition form-input" type="number" id="hour_goal" name="hour_goal" value="<?php echo $current_goal; ?>" required min="1">
-                            <p style="font-size: 11px; color: #6b7280; margin-top: 4px;">The total required hours for your university or company internship program (e.g. 480 hours).</p>
-                        </div>
-                        
-                        <div class="mb-5">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2" for="hour_from">Start Date</label>
-                            <input class="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none transition form-input" type="date" id="hour_from" name="hour_from" value="<?php echo $current_from; ?>" required>
-                            <p style="font-size: 11px; color: #6b7280; margin-top: 4px;">The date you officially started logging hours for your internship.</p>
-                        </div>
-
-                        <div class="mb-6">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Duty Days Schedule</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <div>
-                                    <span style="font-size: 11px; color: #6b7280; display: block; margin-bottom: 4px;">From</span>
-                                    <select class="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none transition form-input" name="duty_from" required>
-                                        <?php
-                                        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                                        foreach ($days as $day) {
-                                            $sel = ($current_duty_from === $day) ? 'selected' : '';
-                                            echo "<option value=\"$day\" $sel>$day</option>";
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
-                                <div>
-                                    <span style="font-size: 11px; color: #6b7280; display: block; margin-bottom: 4px;">To</span>
-                                    <select class="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none transition form-input" name="duty_to" required>
-                                        <?php
-                                        foreach ($days as $day) {
-                                            $sel = ($current_duty_to === $day) ? 'selected' : '';
-                                            echo "<option value=\"$day\" $sel>$day</option>";
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
-                            </div>
-                            <p style="font-size: 11px; color: #6b7280; margin-top: 4px;">Configures which days of the week you are actively on duty to accurately estimate completion dates.</p>
-                        </div>
-                        
-                        <button type="submit" name="update_burnout" class="w-full py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition shadow-lg shadow-gray-100">
-                            Update Goal Settings
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Appearance settings -->
+            <!-- Section: Profile & Account -->
+            <div id="section-account" class="settings-section space-y-8">
+                <!-- Appearance Settings -->
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 glass-card">
                     <div class="flex items-center justify-between">
                         <div>
@@ -260,10 +161,7 @@ $base_url = "../";
                         </label>
                     </div>
                 </div>
-            </div>
 
-            <!-- Section 2: Profile & Account -->
-            <div id="section-account" class="settings-section hidden space-y-8">
                 <!-- Account Details -->
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden glass-card">
                     <div class="py-6 border-b border-gray-100">
