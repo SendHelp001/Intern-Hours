@@ -23,11 +23,18 @@ CREATE TABLE IF NOT EXISTS users (
   google_refresh_token TEXT DEFAULT NULL,
   google_access_token TEXT DEFAULT NULL,
   name VARCHAR(255) NOT NULL,
+  nickname VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   role ENUM('Intern', 'Admin') NOT NULL,
   office_id INT NOT NULL,
   organization_id INT NOT NULL,
+  birthdate DATE,
+  contact INT(11),
+  address VARCHAR (255),
+  city VARCHAR(255),
+  province VARCHAR(255),
+  postal_code INT(6),
   is_darkmode ENUM('0', '1') DEFAULT '0' NOT NULL,
   is_public ENUM('0', '1') DEFAULT '0' NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP(),
@@ -51,6 +58,22 @@ CREATE TABLE IF NOT EXISTS hours (
   CONSTRAINT fk_hours_user
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS check_in (
+  check_in_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  date DATE NOT NULL,
+  morning_in DATETIME DEFAULT NULL,
+  morning_out DATETIME DEFAULT NULL,
+  afternoon_in DATETIME DEFAULT NULL,
+  afternoon_out DATETIME DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP(),
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP() 
+    ON UPDATE CURRENT_TIMESTAMP(),
+  
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 
 CREATE TABLE IF NOT EXISTS absences (
   absences_id INT AUTO_INCREMENT PRIMARY KEY,

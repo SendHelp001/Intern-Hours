@@ -169,7 +169,7 @@ if (isset($_SESSION['user_id'])) {
             <ul class="space-y-2">
               <li><a href="#" class="hover:text-white transition">Help Center</a></li>
               <li><a href="#" class="hover:text-white transition">Contact Us</a></li>
-              <li><a href="#" class="hover:text-white transition">Privacy Policy</a></li>
+              <li><a href="views/feed.php?page=terms" class="hover:text-white transition font-medium">Terms of Service</a></li>
             </ul>
           </div>
         </div>

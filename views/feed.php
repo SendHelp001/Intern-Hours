@@ -2,8 +2,29 @@
 require_once __DIR__ . '/../config.php';
 session_start();
 
+$needs_profile_completion = false;
+$user_profile = null;
+
 // Redirect logic
 if (isset($_SESSION['user_id']) && isset($_SESSION['user_role'])) {
+    // Check if profile is complete
+    try {
+        $stmt = $pdo->prepare("SELECT contact, birthdate, province, city, address, postal_code, nickname FROM users WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $user_profile = $stmt->fetch();
+        
+        if ($user_profile) {
+            $needs_profile_completion = empty($user_profile['contact']) || 
+                                        empty($user_profile['birthdate']) || 
+                                        empty($user_profile['province']) || 
+                                        empty($user_profile['city']) || 
+                                        empty($user_profile['address']) ||
+                                        empty($user_profile['postal_code']);
+        }
+    } catch (Exception $e) {
+        // Fallback if schema changes have not been fully applied yet
+    }
+
     $requested_page = $_GET['page'] ?? '';
     // If logged in and on landing or login page, go to dashboard
     if (empty($requested_page) || $requested_page === 'login') {
@@ -13,7 +34,7 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['user_role'])) {
 } else {
     // If not logged in and trying to access restricted page, go to login
     $requested_page = $_GET['page'] ?? 'login';
-    if (!in_array($requested_page, ['login', 'register'])) {
+    if (!in_array($requested_page, ['login', 'register', 'terms'])) {
         header("Location: feed.php?page=login");
         exit;
     }
@@ -53,6 +74,9 @@ require_once __DIR__ . '/components/header.php';
         case 'colleagues':
             require_once __DIR__ . '/pages/intern/colleagues.php';
             break;
+        case 'terms':
+            require_once __DIR__ . '/pages/termsofservices.php';
+            break;
         case 'login':
         default:
             require_once __DIR__ . '/pages/auth/login.php';
@@ -62,5 +86,10 @@ require_once __DIR__ . '/components/header.php';
 </main>
 
 <?php require_once __DIR__ . '/components/footer.php'; ?>
+
+<?php if ($needs_profile_completion): ?>
+    <?php require_once __DIR__ . '/components/profile_completion_modal.php'; ?>
+<?php endif; ?>
+
 </body>
 </html>
