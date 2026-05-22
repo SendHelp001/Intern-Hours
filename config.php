@@ -28,7 +28,14 @@ if (file_exists($envFile)) {
     }
 }
 
-// Function to get config with fallbacks
+/**
+ * Retrieves an environment variable configuration value with fallback mechanisms.
+ * Checks $_ENV, $_SERVER, and getenv() before returning the default value.
+ *
+ * @param string $key The environment variable key name.
+ * @param string $default The default value if not found.
+ * @return string The configuration value or default.
+ */
 function get_config($key, $default = '') {
     return $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key) ?: $default;
 }
@@ -44,57 +51,69 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-    // Auto-migration: Ensure columns exist
-    $stmtPublic = $pdo->query("SHOW COLUMNS FROM users LIKE 'is_public'");
-    if (!$stmtPublic->fetch()) {
-        $pdo->exec("ALTER TABLE users ADD COLUMN is_public BOOLEAN DEFAULT FALSE");
-    }
-
-    $stmtDarkMode = $pdo->query("SHOW COLUMNS FROM users LIKE 'is_darkmode'");
-    if (!$stmtDarkMode->fetch()) {
-        $pdo->exec("ALTER TABLE users ADD COLUMN is_darkmode BOOLEAN DEFAULT FALSE");
-    }
-
-    // Auto-migration: Adjust user columns to support Google signup and optional fields
+    // Auto-migration: Ensure columns exist (MySQL 5.7 compatible check)
     try {
+        $columns = [];
+        $stmt = $pdo->query("SHOW COLUMNS FROM users");
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $columns[] = strtolower($row['Field']);
+        }
+
+        if (!in_array('is_public', $columns)) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN is_public BOOLEAN DEFAULT FALSE");
+        }
+        if (!in_array('is_darkmode', $columns)) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN is_darkmode BOOLEAN DEFAULT FALSE");
+        }
+        if (!in_array('profile_picture', $columns)) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(500) DEFAULT NULL AFTER email");
+        }
+
+        // Auto-migration: Adjust user columns to support Google signup and optional fields
         $pdo->exec("ALTER TABLE users MODIFY COLUMN nickname VARCHAR(255) NOT NULL DEFAULT ''");
         $pdo->exec("ALTER TABLE users MODIFY COLUMN password VARCHAR(255) NULL");
         $pdo->exec("ALTER TABLE users MODIFY COLUMN office_id INT NULL");
         $pdo->exec("ALTER TABLE users MODIFY COLUMN organization_id INT NULL");
-    } catch (PDOException $e) {
-        // Silently continue if database changes are already applied or unsupported
+
+        // Auto-migration: Create biometrics and attendance log tables
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS biometric_credentials (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                credential_id VARCHAR(255) NOT NULL UNIQUE,
+                public_key TEXT NOT NULL,
+                sign_count INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ");
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS attendance_logs (
+                log_id INT AUTO_INCREMENT PRIMARY KEY,
+                employee_id INT NOT NULL,
+                device_token VARCHAR(255) NOT NULL,
+                action_type ENUM('clock_in', 'clock_out') NOT NULL,
+                gps_latitude DECIMAL(10, 8),
+                gps_longitude DECIMAL(11, 8),
+                server_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ");
+    } catch (PDOException $migrationException) {
+        // Log migration error or handle it, but do not crash the application connection
+        error_log("Database Auto-migration failed: " . $migrationException->getMessage());
     }
-
-    // Auto-migration: Create biometrics and attendance log tables
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS biometric_credentials (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            credential_id VARCHAR(255) NOT NULL UNIQUE,
-            public_key TEXT NOT NULL,
-            sign_count INT NOT NULL DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    ");
-
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS attendance_logs (
-            log_id INT AUTO_INCREMENT PRIMARY KEY,
-            employee_id INT NOT NULL,
-            device_token VARCHAR(255) NOT NULL,
-            action_type ENUM('clock_in', 'clock_out') NOT NULL,
-            gps_latitude DECIMAL(10, 8),
-            gps_longitude DECIMAL(11, 8),
-            server_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    ");
 } catch (PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }
 
-// Parse Browser from User Agent
+/**
+ * Analyzes the HTTP User Agent string to identify the browser name.
+ *
+ * @param string $user_agent The raw HTTP User Agent header string.
+ * @return string The identified browser (e.g. 'Google Chrome') or 'Unknown Browser'.
+ */
 function get_browser_from_ua($user_agent) {
     if (empty($user_agent)) return 'Unknown Browser';
     
@@ -115,7 +134,12 @@ function get_browser_from_ua($user_agent) {
     return 'Other Browser';
 }
 
-// Parse Device from User Agent
+/**
+ * Analyzes the HTTP User Agent string to identify the operating system/device.
+ *
+ * @param string $user_agent The raw HTTP User Agent header string.
+ * @return string The identified device type (e.g. 'Windows PC', 'iPhone') or 'Unknown Device'.
+ */
 function get_device_from_ua($user_agent) {
     if (empty($user_agent)) return 'Unknown Device';
     
