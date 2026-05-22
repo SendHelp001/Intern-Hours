@@ -197,10 +197,10 @@ $base_url = "../";
 
                 <!-- Account Details -->
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden glass-card">
-                    <div class="py-6 border-b border-gray-100">
+                    <div class="py-6 px-8 border-b border-gray-100">
                         <h2 class="text-xl font-bold text-gray-900">Account Details</h2>
                     </div>
-                    <div class="py-8 grid md:grid-cols-2 gap-x-12 gap-y-10">
+                    <div class="py-8 px-8 grid md:grid-cols-2 gap-x-12 gap-y-10">
                         <div class="space-y-1">
                             <label class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Full Name</label>
                             <p class="text-lg font-medium text-gray-900"><?php echo htmlspecialchars($user_name); ?></p>
@@ -252,10 +252,10 @@ $base_url = "../";
 
                 <!-- Password Change -->
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden glass-card">
-                    <div class="py-6 border-b border-gray-100">
+                    <div class="py-6 px-8 border-b border-gray-100">
                         <h2 class="text-xl font-bold text-gray-900">Security & Password</h2>
                     </div>
-                    <div class="py-8">
+                    <div class="py-8 px-8">
                         <div id="password-alert" class="hidden"></div>
                         <form id="password-form" class="space-y-6">
                             <div class="grid md:grid-cols-2 gap-6">
