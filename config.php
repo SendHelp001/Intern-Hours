@@ -28,7 +28,14 @@ if (file_exists($envFile)) {
     }
 }
 
-// Function to get config with fallbacks
+/**
+ * Retrieves an environment variable configuration value with fallback mechanisms.
+ * Checks $_ENV, $_SERVER, and getenv() before returning the default value.
+ *
+ * @param string $key The environment variable key name.
+ * @param string $default The default value if not found.
+ * @return string The configuration value or default.
+ */
 function get_config($key, $default = '') {
     return $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key) ?: $default;
 }
@@ -61,6 +68,12 @@ try {
         if (!in_array('profile_picture', $columns)) {
             $pdo->exec("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(500) DEFAULT NULL AFTER email");
         }
+
+        // Auto-migration: Adjust user columns to support Google signup and optional fields
+        $pdo->exec("ALTER TABLE users MODIFY COLUMN nickname VARCHAR(255) NOT NULL DEFAULT ''");
+        $pdo->exec("ALTER TABLE users MODIFY COLUMN password VARCHAR(255) NULL");
+        $pdo->exec("ALTER TABLE users MODIFY COLUMN office_id INT NULL");
+        $pdo->exec("ALTER TABLE users MODIFY COLUMN organization_id INT NULL");
 
         // Auto-migration: Create biometrics and attendance log tables
         $pdo->exec("
@@ -95,7 +108,12 @@ try {
     die("Connection failed: " . $e->getMessage());
 }
 
-// Parse Browser from User Agent
+/**
+ * Analyzes the HTTP User Agent string to identify the browser name.
+ *
+ * @param string $user_agent The raw HTTP User Agent header string.
+ * @return string The identified browser (e.g. 'Google Chrome') or 'Unknown Browser'.
+ */
 function get_browser_from_ua($user_agent) {
     if (empty($user_agent)) return 'Unknown Browser';
     
@@ -116,7 +134,12 @@ function get_browser_from_ua($user_agent) {
     return 'Other Browser';
 }
 
-// Parse Device from User Agent
+/**
+ * Analyzes the HTTP User Agent string to identify the operating system/device.
+ *
+ * @param string $user_agent The raw HTTP User Agent header string.
+ * @return string The identified device type (e.g. 'Windows PC', 'iPhone') or 'Unknown Device'.
+ */
 function get_device_from_ua($user_agent) {
     if (empty($user_agent)) return 'Unknown Device';
     
